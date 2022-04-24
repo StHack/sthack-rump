@@ -1,0 +1,72 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="description" content=""/>
+    <meta name="author" content="Rexhep Shijaku"/>
+    <meta name="viewport" content="width=device-width; initial-scale=1.0"/>
+
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<div class="emptyspace">
+</div>
+<div class="titleholder">
+    <div>
+        Propose ta Rump !
+    </div>
+    <div class="descriptionholder">
+        Pour l'édition 2022 de la Sthack, nous proposons un créneau d'une heure dédié aux Rumps.
+        La durée maximum d'une Rump est de 10 minutes.
+    </div>
+    <div class="descriptionholder"><a href="/logout.html">Logout</a></div>
+</div>
+
+<div class="formholder">
+  <div class="left">
+      Titre: <input type="text" id="rump-title"/><br />
+      Speaker: <input type="text" id="rump-speaker"/><br />
+      Description: <textarea id="rump-description" rows=10 cols=40></textarea><br /><br />
+      <hr />
+      <button id="submit">Submit</button>
+  </div>
+</div>
+<script>
+  const AUTH_HEADER = 'rump-sthack-auth';
+  const QR_CODE_KEY = 'sthack-rump:qr_code'
+  const qrCodeFromLocalStorage = window.localStorage.getItem(QR_CODE_KEY) 
+  if(!qrCodeFromLocalStorage){
+      window.location = '/login.html'
+  }
+  fetch('/rump', {headers: {[AUTH_HEADER]: qrCodeFromLocalStorage}})
+    .then((res) => {
+      if(res.status === 401){
+        window.location = '/logout.html'
+      }
+      return res.json()
+    })
+    .then((data) => {
+      document.getElementById('rump-title').value = data.title
+      document.getElementById('rump-description').value = data.description
+      document.getElementById('rump-speaker').value = data.speaker
+    })
+    .catch((error) => {
+      alert(error)
+    })
+  document.getElementById('submit').addEventListener('click', () => {
+    const rump = {
+      title: document.getElementById('rump-title').value,
+      description: document.getElementById('rump-description').value,
+      speaker: document.getElementById('rump-speaker').value,
+    }
+
+    fetch('/rump', {method: 'PUT', headers: {[AUTH_HEADER]: qrCodeFromLocalStorage, 'content-type': 'application/json'}, body: JSON.stringify(rump)}).then((res) => {
+      if(res.status === 200) {
+        alert('Saved')
+      }
+    })
+  })
+</script>
+</body>
+
+</html>

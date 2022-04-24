@@ -1,0 +1,98 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="description" content=""/>
+    <meta name="author" content="Rexhep Shijaku"/>
+    <meta name="viewport" content="width=device-width; initial-scale=1.0"/>
+
+    <link rel="stylesheet" href="./css/style.css">
+    <script type="text/javascript" src="./js/file_demo_only/jsQR.js"></script>
+    <script type="text/javascript" src="./js/file_demo_only/pdf.min.js"></script>
+    <script type="text/javascript" src="./js/file_demo_only/pdf-qr.js"></script>
+</head>
+<body>
+
+<div class="emptyspace">
+</div>
+<div class="titleholder">
+    <div>
+        Login with your HelloAsso ticket
+    </div>
+    <div class="descriptionholder">
+        Just select your PDF and we will take care of the rest
+    </div>
+</div>
+
+<div class="formholder">
+    <div class="left">
+        <div class="left">
+            <input id="pdfentryfile" type="file"
+                   accept="application/pdf"
+                   size="40" style="float: left;">
+        </div>
+        <div class="right">
+            <input type="number" min="1" step="1" id="pageNr" style="display: none; width: 40px">
+            <button onclick="decodePdf()" id="decode_btn" style="width: 120px; margin-left: 15px;">Login</button>
+        </div>
+    </div>
+</div>
+
+</body>
+
+</html>
+
+<script>
+    const QR_CODE_KEY = 'sthack-rump:qr_code'
+    const qrCodeFromLocalStorage = window.localStorage.getItem(QR_CODE_KEY) 
+    if(qrCodeFromLocalStorage){
+        window.location = '/index.html'
+    }
+    const configs = {
+        scale: {
+            once: true,
+            value: 1,
+
+            start: 0.2,
+            step: 0.2,
+            stop: 2,
+        },
+        resultOpts: {
+            singleCodeInPage: true,
+            multiCodesInPage: false,
+            maxCodesInPage: 1,
+        },
+        improve: true,
+        jsQR: {},
+    };
+
+    function decodePdf() {
+        const decoder = document.getElementById('decode_btn');
+        decoder.disabled = true;
+
+        // this function is used to catch the result returned from PDFQrJS
+        function recordcallback(result) {
+            if (result.success) {
+                window.localStorage.setItem(QR_CODE_KEY, result.codes[0])
+                window.location = '/index.html'
+            } else {
+                console.log(result.message)
+                alert('Invalid pdf please contact staff@sthack.fr')
+            }
+            decoder.disabled = false;
+        }
+
+        // decode pdf call (all code you need to call in order to scan qr codes in you pdfs
+        var input_file = document.getElementById('pdfentryfile');
+        if (input_file.value === "") {
+            alert('Please provide a valid pdf file!');
+            decoder.disabled = false;
+            return false;
+        }
+
+        PDF_QR_JS.decodeSinglePage(input_file, 1, configs,
+            recordcallback
+        );
+    }
+</script>
+
+

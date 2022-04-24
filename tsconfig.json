@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "lib": ["es2018"],
+    "target": "es2018",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "typeRoots": ["./src/@types", "./node_modules/@types"],
+    "outDir": "./dist"
+  },
+  "include": ["index.ts", "definitions/**/*.ts", "src/**/*.ts"]
+}

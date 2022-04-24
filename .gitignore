@@ -1,0 +1,7 @@
+.env.yml
+node_modules
+.eslint
+*.log
+dist
+token.json
+participants.json
