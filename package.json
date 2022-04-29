@@ -2,8 +2,6 @@
   "scripts": {
     "tsc": "node ./node_modules/.bin/tsc",
     "build": "yarn tsc",
-    "predeploy": "yarn build && cp package.json dist/",
-    "deploy": "gcloud functions deploy gcp-watcher --region=europe-west1 --trigger-topic=gcp-watcher --runtime nodejs14 --timeout 500s --source dist/ --entry-point pubSubMain --env-vars-file",
     "lint": "node ./node_modules/.bin/eslint \"{src,definitions}/**/*.{js,ts}\"",
     "dev": "ts-node -r dotenv-yaml/config index.ts",
     "extractQRCodeFromHelloAsso": "ts-node -r dotenv-yaml/config extractQRCodeFromHelloAsso.ts"

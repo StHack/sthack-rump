@@ -50,9 +50,6 @@
       document.getElementById('rump-description').value = data.description
       document.getElementById('rump-speaker').value = data.speaker
     })
-    .catch((error) => {
-      alert(error)
-    })
   document.getElementById('submit').addEventListener('click', () => {
     const rump = {
       title: document.getElementById('rump-title').value,
