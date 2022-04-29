@@ -1,36 +1,44 @@
+
 <html>
 <head>
     <meta charset="utf-8"/>
     <meta name="description" content=""/>
     <meta name="author" content="Rexhep Shijaku"/>
     <meta name="viewport" content="width=device-width; initial-scale=1.0"/>
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity=" sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
     <link rel="stylesheet" href="./css/style.css">
+
 </head>
 <body>
+<div class="container">
+  <div class="">
+    <center><img src="/media/logo.png"></center>
+  </div>
 
-<div class="emptyspace">
-</div>
-<div class="titleholder">
-    <div>
-        Propose ta Rump !
-    </div>
-    <div class="descriptionholder">
-        Pour l'édition 2022 de la Sthack, nous proposons un créneau d'une heure dédié aux Rumps.
-        La durée maximum d'une Rump est de 10 minutes.
-    </div>
-    <div class="descriptionholder"><a href="/logout.html">Logout</a></div>
-</div>
+  <div class="titleholder">
+      <div>
+          Propose ta Rump !
+      </div>
+      <div class="descriptionholder">
+          Pour l'édition 2022 de la Sthack, nous proposons un créneau d'une heure dédié aux Rumps.
+          La durée maximum d'une Rump est de 10 minutes.
+      </div>
+      <div class="descriptionholder"><a href="/logout.html">Logout</a></div>
+  </div>
 
-<div class="formholder">
-  <div class="left">
-      Titre: <input type="text" id="rump-title"/><br />
-      Speaker: <input type="text" id="rump-speaker"/><br />
-      Description: <textarea id="rump-description" rows=10 cols=40></textarea><br /><br />
-      <hr />
-      <button id="submit">Submit</button>
+  <div class="formholder">
+    <div class="">
+        Titre: <input type="text" class="form-control" id="rump-title"/><br />
+        Speaker: <input type="text" class="form-control" id="rump-speaker"/><br />
+        Description: <textarea class="form-control" id="rump-description" rows=10 cols=40></textarea><br /><br />
+        <hr />
+        <div class="d-grid gap-2">
+          <button class="btn btn-success" id="submit">Submit</button>
+        </div>
+    </div>
   </div>
 </div>
+
 <script>
   const AUTH_HEADER = 'rump-sthack-auth';
   const QR_CODE_KEY = 'sthack-rump:qr_code'
@@ -59,7 +67,10 @@
 
     fetch('/rump', {method: 'PUT', headers: {[AUTH_HEADER]: qrCodeFromLocalStorage, 'content-type': 'application/json'}, body: JSON.stringify(rump)}).then((res) => {
       if(res.status === 200) {
-        alert('Saved')
+        alert('Thanks !');
+        document.getElementById('rump-title').value="";
+        document.getElementById('rump-description').value="";
+        document.getElementById('rump-speaker').value="";
       }
     })
   })
