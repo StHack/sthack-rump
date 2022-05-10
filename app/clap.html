@@ -44,18 +44,18 @@
 </html>
 
 <script>
-  const QR_CODE_KEY = "sthack-rump:qr_code";
+  const QR_CODE_KEY = 'sthack-rump:qr_code';
   const CLAPPING_TTL = 1000;
   const qrCodeFromLocalStorage = window.localStorage.getItem(QR_CODE_KEY);
 
   var socket = io();
-  socket.emit("auth", qrCodeFromLocalStorage);
+  socket.emit('auth', qrCodeFromLocalStorage);
 
   function clap() {
-    document.getElementById("clap_btn").setAttribute("disabled", true);
-    socket.emit("clap");
+    document.getElementById('clap_btn').setAttribute('disabled', true);
+    socket.emit('clap');
     setTimeout(() => {
-      document.getElementById("clap_btn").removeAttribute("disabled");
+      document.getElementById('clap_btn').removeAttribute('disabled');
     }, CLAPPING_TTL);
   }
 </script>

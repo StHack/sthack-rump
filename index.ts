@@ -1,17 +1,17 @@
-import express, { NextFunction, Request, Response } from "express";
-import { readFileSync, existsSync, writeFileSync } from "fs";
-import { Participant, Rump, assertIsString } from "./src/utils";
-import { json } from "body-parser";
-import { createServer } from "http";
-import { Server, Socket } from "socket.io";
+import express, { NextFunction, Request, Response } from 'express';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { Participant, Rump, assertIsString } from './src/utils';
+import { json } from 'body-parser';
+import { createServer } from 'http';
+import { Server, Socket } from 'socket.io';
 // eslint-disable-next-line node/no-unpublished-import
-const participants = JSON.parse(readFileSync("./participants.json", "utf-8"));
+const participants = JSON.parse(readFileSync('./participants.json', 'utf-8'));
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
 let clapping: Set<string> = new Set();
 
-const AUTH_HEADER = "rump-sthack-auth";
+const AUTH_HEADER = 'rump-sthack-auth';
 const CLAPPING_TTL = 1000;
 
 function authenticate(qrCode: string | undefined) {
@@ -35,7 +35,7 @@ function authenticationMiddleware(
     return next();
   }
   res.status(401);
-  throw Error("Invalid authentication");
+  throw Error('Invalid authentication');
 }
 
 function initConfig() {
@@ -43,28 +43,28 @@ function initConfig() {
     port: process.env.STHACK_RUMP_PORT
       ? parseInt(process.env.STHACK_RUMP_PORT, 10)
       : 3000,
-    hostname: process.env.STHACK_RUMP_HOSTNAME ?? "localhost",
+    hostname: process.env.STHACK_RUMP_HOSTNAME ?? 'localhost',
   };
 }
 const config = initConfig();
 
-app.use(express.static("app"));
+app.use(express.static('app'));
 
 app.use(authenticationMiddleware);
 app.use(json());
 
-app.get("/rump", (req, res) => {
+app.get('/rump', (req, res) => {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   const participant = req.participant;
   const rumpFile = `rumps/${participant.qrCode}.json`;
   let rump: Rump = {
-    title: "",
-    description: "",
-    speaker: "",
+    title: '',
+    description: '',
+    speaker: '',
   };
   if (existsSync(rumpFile)) {
-    rump = JSON.parse(readFileSync(rumpFile, "utf-8"));
+    rump = JSON.parse(readFileSync(rumpFile, 'utf-8'));
   }
 
   assertIsString(rump.description);
@@ -73,19 +73,19 @@ app.get("/rump", (req, res) => {
   res.send(rump);
 });
 
-app.put("/rump", (req, res) => {
+app.put('/rump', (req, res) => {
   console.log(req.body);
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   const participant = req.participant;
   const rumpFile = `rumps/${participant.qrCode}.json`;
   const rump: Rump = {
-    title: req.body.title ?? "",
-    description: req.body.description ?? "",
-    speaker: req.body.speaker ?? "",
+    title: req.body.title ?? '',
+    description: req.body.description ?? '',
+    speaker: req.body.speaker ?? '',
   };
 
-  writeFileSync(rumpFile, JSON.stringify(rump), "utf-8");
+  writeFileSync(rumpFile, JSON.stringify(rump), 'utf-8');
   res.send(rump);
 });
 
@@ -97,9 +97,9 @@ interface ISocket extends Socket {
   authenticatedParticipant?: Participant | null;
 }
 
-io.on("connection", (socket: ISocket) => {
-  console.log("a user connected");
-  socket.on("auth", (qrCode: string) => {
+io.on('connection', (socket: ISocket) => {
+  console.log('a user connected');
+  socket.on('auth', (qrCode: string) => {
     console.log(`auth with QR code : ${qrCode}`);
     const participant = authenticate(qrCode);
     if (authenticate(qrCode)) {
@@ -108,7 +108,7 @@ io.on("connection", (socket: ISocket) => {
       socket.authenticatedParticipant = null;
     }
   });
-  socket.on("clap", () => {
+  socket.on('clap', () => {
     const participant = socket.authenticatedParticipant;
     console.log(
       `clap event received (authenticated user : ${participant?.displayName})`
@@ -119,7 +119,7 @@ io.on("connection", (socket: ISocket) => {
     }
     const { qrCode } = participant;
     if (!clapping.has(qrCode)) {
-      console.log("👏");
+      console.log('👏');
       clapping.add(qrCode);
       console.log(`clapmeter : ${clapping.size}`);
       setTimeout(() => {
@@ -130,11 +130,11 @@ io.on("connection", (socket: ISocket) => {
       console.log(`clapping too fast`);
     }
   });
-  socket.on("disconnect", () => {
-    console.log("user disconnected");
+  socket.on('disconnect', () => {
+    console.log('user disconnected');
   });
 });
 
 server.listen(3000, () => {
-  console.log("listening on *:3000");
+  console.log('listening on *:3000');
 });
