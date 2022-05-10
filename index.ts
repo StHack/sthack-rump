@@ -121,9 +121,11 @@ io.on('connection', (socket: ISocket) => {
     if (!clapping.has(qrCode)) {
       console.log('👏');
       clapping.add(qrCode);
+      socket.broadcast.emit('clapmeter', clapping.size);
       console.log(`clapmeter : ${clapping.size}`);
       setTimeout(() => {
         clapping.delete(qrCode);
+        socket.broadcast.emit('clapmeter', clapping.size);
         console.log(`clapmeter : ${clapping.size}`);
       }, CLAPPING_TTL);
     } else {
