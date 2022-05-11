@@ -171,8 +171,8 @@ body {
 }
 
 .gauge-container {
-  width: 150px;
-  height: 150px;
+  width: 250px;
+  height: 250px;
   display: block;
   padding: 10px;
 }
@@ -187,8 +187,27 @@ body {
   fill: rgba(0,0,0,0);
 }
 .gauge-container > .gauge .value-text {
-  fill: rgb(47, 227, 255);
+  fill: black;
   font-family: sans-serif;
   font-weight: bold;
   font-size: 1em;
+}
+
+.timer-container {
+  font-size: 70px;
+  font-weight: bold;
+}
+
+.centered-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-clap {
+  min-width: 200px;
+  min-height: 150px;
+  font-size: 48px;
+  background-color: deeppink;
 }

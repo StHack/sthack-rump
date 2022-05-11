@@ -23,33 +23,90 @@
       <div class="">
         <center><img src="/media/logo.png" /></center>
       </div>
-      <div id="gauge" class="gauge-container"></div>
+      <div class="centered-container">
+        <div id="timer" class="timer-container">10:00</div>
+        <div id="gauge" class="gauge-container"></div>
+        <button
+          onclick="startRump()"
+          id="start_btn"
+          class="btn-lg btn-success"
+          style="margin-top: 1%"
+        >
+          Start rump
+        </button>
+      </div>
     </div>
   </body>
 </html>
 
 <script>
-  let gauge;
+  const GAUGE_MAX = 100;
+  const RUMP_MINUTES = 10;
+  const timeOutSound = new Audio('./media/applause.mp3');
+  const kickedSound = new Audio('./media/horn-sound-effect.mp3');
 
-  createGauge();
+  const ADMIN_PW_KEY = 'sthack-rump:admin_pw';
+
+  let thresholdReached = false;
+  let startTimestamp;
+
+  const socket = io();
+  const adminPwFromLocalStorage = window.localStorage.getItem(ADMIN_PW_KEY);
+  socket.emit('auth-admin', adminPwFromLocalStorage);
+
+  function startRump() {
+    document.getElementById('start_btn').hidden = true;
+
+    const gauge = createGauge();
+
+    const startTimestamp = Date.now();
+    const timer = setInterval(() => {
+      const elapsedSeconds = Math.ceil((Date.now() - startTimestamp) / 1000);
+      let remainingTime = RUMP_MINUTES * 60 - elapsedSeconds;
+      if (remainingTime <= 0) {
+        remainingTime = 0;
+        gauge.setValueAnimated(GAUGE_MAX);
+        timeOutSound.play();
+        thresholdReached = true;
+        clearInterval(timer);
+      }
+      const remainingMinutes = (
+        '00' + parseInt(Math.floor(remainingTime / 60))
+      ).slice(-2);
+      const remainingSeconds = (
+        '00' + parseInt(Math.floor(remainingTime % 60))
+      ).slice(-2);
+      const timerLabel = `${remainingMinutes}:${remainingSeconds}`;
+      document.getElementById('timer').textContent = timerLabel;
+    }, 100);
+
+    socket.emit('clapmeter-reset');
+    socket.on('clapmeter', (value) => {
+      if (thresholdReached) return;
+      if (value >= GAUGE_MAX) {
+        thresholdReached = true;
+        kickedSound.play();
+        setTimeout(() => timeOutSound.play(), 2000);
+        gauge.setValue(GAUGE_MAX);
+        document.getElementById('timer').textContent = 'Thanks, next !';
+        clearInterval(timer);
+      } else if (!thresholdReached) gauge.setValue(value);
+    });
+  }
 
   function createGauge() {
     const Gauge = window.Gauge;
 
-    // Create a new Gauge
-    const GAUGE_MAX = 5;
-    gauge = Gauge(document.getElementById('gauge'), {
+    return Gauge(document.getElementById('gauge'), {
       max: GAUGE_MAX,
-      // custom label renderer
       label: function (value) {
         return `${parseInt(Math.ceil(value), 10)} 👏`;
       },
       value: 0,
-      // Custom dial colors (Optional)
       color: function (value) {
         if (value >= GAUGE_MAX) {
           return '#ef4655'; // red
-        } else if (value > GAUGE_MAX - GAUGE_MAX * 0.1) {
+        } else if (value > GAUGE_MAX - GAUGE_MAX * 0.2) {
           return '#f7aa38'; // orange
         } else if (value > GAUGE_MAX - GAUGE_MAX * 0.5) {
           return '#fffa50'; // yellow
@@ -59,12 +116,4 @@
       },
     });
   }
-
-  var socket = io();
-  socket.on('clapmeter', (value) => {
-    gauge.setValueAnimated(value);
-  });
-  socket.on('clapmeter-reset', () => {
-    gauge.setValue(0);
-  });
 </script>

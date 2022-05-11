@@ -21,6 +21,10 @@ function authenticate(qrCode: string | undefined) {
   return undefined;
 }
 
+function authenticateAdmin(password: string | undefined) {
+  return password === process.env.ADMIN_PW;
+}
+
 function authenticationMiddleware(
   req: Request,
   res: Response,
@@ -89,12 +93,9 @@ app.put('/rump', (req, res) => {
   res.send(rump);
 });
 
-app.listen(config.port, config.hostname, () => {
-  console.log(`Server listening on ${config.hostname}:${config.port}`);
-});
-
 interface ISocket extends Socket {
   authenticatedParticipant?: Participant | null;
+  isAdmin?: Boolean | null;
 }
 
 io.on('connection', (socket: ISocket) => {
@@ -108,6 +109,14 @@ io.on('connection', (socket: ISocket) => {
       socket.authenticatedParticipant = null;
     }
   });
+  socket.on('auth-admin', (password: string) => {
+    if (authenticateAdmin(password)) {
+      console.log(`admin auth success`);
+      socket.isAdmin = true;
+    } else {
+      console.log(`admin auth failure`);
+    }
+  });
   socket.on('clap', () => {
     const participant = socket.authenticatedParticipant;
     console.log(
@@ -119,12 +128,14 @@ io.on('connection', (socket: ISocket) => {
     }
     const { qrCode } = participant;
     if (!clapping.has(qrCode)) {
-      console.log('👏');
-      clapping.add(qrCode);
+      const key = process.env.DISABLE_THROTTLING
+        ? qrCode + Math.random()
+        : qrCode;
+      clapping.add(key);
       socket.broadcast.emit('clapmeter', clapping.size);
       console.log(`clapmeter : ${clapping.size}`);
       setTimeout(() => {
-        clapping.delete(qrCode);
+        clapping.delete(key);
         socket.broadcast.emit('clapmeter', clapping.size);
         console.log(`clapmeter : ${clapping.size}`);
       }, CLAPPING_TTL);
@@ -132,11 +143,18 @@ io.on('connection', (socket: ISocket) => {
       console.log(`clapping too fast`);
     }
   });
+  socket.on('clapmeter-reset', () => {
+    if (!socket.isAdmin) {
+      console.log(`no right to reset the clapmeter my dude`);
+      return;
+    }
+    clapping.clear();
+  });
   socket.on('disconnect', () => {
     console.log('user disconnected');
   });
 });
 
-server.listen(3000, () => {
-  console.log('listening on *:3000');
+server.listen(config.port, config.hostname, () => {
+  console.log(`Server listening on ${config.hostname}:${config.port}`);
 });
