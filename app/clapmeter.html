@@ -52,6 +52,9 @@
 
   const socket = io();
   const adminPwFromLocalStorage = window.localStorage.getItem(ADMIN_PW_KEY);
+  if (!adminPwFromLocalStorage) {
+    window.location = '/login-admin.html';
+  }
   socket.emit('auth-admin', adminPwFromLocalStorage);
 
   function startRump() {
