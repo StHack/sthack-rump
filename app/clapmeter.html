@@ -1,0 +1,119 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="description" content="" />
+    <meta name="author" content="Rexhep Shijaku" />
+    <meta name="viewport" content="width=device-width; initial-scale=1.0" />
+    <script
+      src="https://cdn.socket.io/4.5.0/socket.io.min.js"
+      integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity=" sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    <script type="text/javascript" src="./js/svg-gauge/gauge.min.js"></script>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="">
+        <center><img src="/media/logo.png" /></center>
+      </div>
+      <div class="centered-container">
+        <div id="timer" class="timer-container">10:00</div>
+        <div id="gauge" class="gauge-container"></div>
+        <button
+          onclick="startRump()"
+          id="start_btn"
+          class="btn-lg btn-success"
+          style="margin-top: 1%"
+        >
+          Start rump
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
+
+<script>
+  const GAUGE_MAX = 100;
+  const RUMP_MINUTES = 10;
+  const timeOutSound = new Audio('./media/applause.mp3');
+  const kickedSound = new Audio('./media/horn-sound-effect.mp3');
+
+  const ADMIN_PW_KEY = 'sthack-rump:admin_pw';
+
+  let thresholdReached = false;
+  let startTimestamp;
+
+  const socket = io();
+  const adminPwFromLocalStorage = window.localStorage.getItem(ADMIN_PW_KEY);
+  socket.emit('auth-admin', adminPwFromLocalStorage);
+
+  function startRump() {
+    document.getElementById('start_btn').hidden = true;
+
+    const gauge = createGauge();
+
+    const startTimestamp = Date.now();
+    const timer = setInterval(() => {
+      const elapsedSeconds = Math.ceil((Date.now() - startTimestamp) / 1000);
+      let remainingTime = RUMP_MINUTES * 60 - elapsedSeconds;
+      if (remainingTime <= 0) {
+        remainingTime = 0;
+        gauge.setValueAnimated(GAUGE_MAX);
+        timeOutSound.play();
+        thresholdReached = true;
+        clearInterval(timer);
+      }
+      const remainingMinutes = (
+        '00' + parseInt(Math.floor(remainingTime / 60))
+      ).slice(-2);
+      const remainingSeconds = (
+        '00' + parseInt(Math.floor(remainingTime % 60))
+      ).slice(-2);
+      const timerLabel = `${remainingMinutes}:${remainingSeconds}`;
+      document.getElementById('timer').textContent = timerLabel;
+    }, 100);
+
+    socket.emit('clapmeter-reset');
+    socket.on('clapmeter', (value) => {
+      if (thresholdReached) return;
+      if (value >= GAUGE_MAX) {
+        thresholdReached = true;
+        kickedSound.play();
+        setTimeout(() => timeOutSound.play(), 2000);
+        gauge.setValue(GAUGE_MAX);
+        document.getElementById('timer').textContent = 'Thanks, next !';
+        clearInterval(timer);
+      } else if (!thresholdReached) gauge.setValue(value);
+    });
+  }
+
+  function createGauge() {
+    const Gauge = window.Gauge;
+
+    return Gauge(document.getElementById('gauge'), {
+      max: GAUGE_MAX,
+      label: function (value) {
+        return `${parseInt(Math.ceil(value), 10)} 👏`;
+      },
+      value: 0,
+      color: function (value) {
+        if (value >= GAUGE_MAX) {
+          return '#ef4655'; // red
+        } else if (value > GAUGE_MAX - GAUGE_MAX * 0.2) {
+          return '#f7aa38'; // orange
+        } else if (value > GAUGE_MAX - GAUGE_MAX * 0.5) {
+          return '#fffa50'; // yellow
+        } else {
+          return '#5ee432'; // green
+        }
+      },
+    });
+  }
+</script>
