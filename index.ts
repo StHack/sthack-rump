@@ -9,7 +9,7 @@ const participants = JSON.parse(readFileSync('./participants.json', 'utf-8'));
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
-let clapping: Set<string> = new Set();
+const clapping: Set<string> = new Set();
 
 const AUTH_HEADER = 'rump-sthack-auth';
 const CLAPPING_TTL = 1000;
@@ -95,7 +95,7 @@ app.put('/rump', (req, res) => {
 
 interface ISocket extends Socket {
   authenticatedParticipant?: Participant | null;
-  isAdmin?: Boolean | null;
+  isAdmin?: boolean | null;
 }
 
 io.on('connection', (socket: ISocket) => {
@@ -128,9 +128,7 @@ io.on('connection', (socket: ISocket) => {
     }
     const { qrCode } = participant;
     if (!clapping.has(qrCode)) {
-      const key = process.env.DISABLE_THROTTLING
-        ? qrCode + Math.random()
-        : qrCode;
+      const key = process.env.DISABLE_THROTTLING ? socket.id : qrCode;
       clapping.add(key);
       socket.broadcast.emit('clapmeter', clapping.size);
       console.log(`clapmeter : ${clapping.size}`);
