@@ -9,7 +9,7 @@ const participants = JSON.parse(readFileSync('./participants.json', 'utf-8'));
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
-const clapping: Set<string> = new Set();
+const clapping: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
 const AUTH_HEADER = 'rump-sthack-auth';
 const CLAPPING_TTL = 1000;
@@ -127,19 +127,24 @@ io.on('connection', (socket: ISocket) => {
       return;
     }
     const { qrCode } = participant;
-    if (!clapping.has(qrCode)) {
-      const key = process.env.DISABLE_THROTTLING ? socket.id : qrCode;
-      clapping.add(key);
-      socket.broadcast.emit('clapmeter', clapping.size);
-      console.log(`clapmeter : ${clapping.size}`);
+
+    const key = process.env.DISABLE_THROTTLING ? socket.id : qrCode;
+
+    const timeout = clapping.get(key);
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    clapping.set(
+      key,
       setTimeout(() => {
         clapping.delete(key);
         socket.broadcast.emit('clapmeter', clapping.size);
         console.log(`clapmeter : ${clapping.size}`);
-      }, CLAPPING_TTL);
-    } else {
-      console.log(`clapping too fast`);
-    }
+      }, CLAPPING_TTL)
+    );
+    socket.broadcast.emit('clapmeter', clapping.size);
+    console.log(`clapmeter : ${clapping.size}`);
   });
   socket.on('clapmeter-reset', () => {
     if (!socket.isAdmin) {
