@@ -5,3 +5,4 @@ node_modules
 dist
 token.json
 participants.json
+.DS_Store
