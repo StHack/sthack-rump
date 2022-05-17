@@ -26,92 +26,142 @@
       <div class="centered-container">
         <div id="timer" class="timer-container">10:00</div>
         <div id="gauge" class="gauge-container"></div>
-        <button
-          onclick="startRump()"
-          id="start_btn"
-          class="btn-lg btn-success"
-          style="margin-top: 1%"
-        >
-          Start rump
-        </button>
+        <div id="buttons" class="buttons-container">
+          <button
+            onclick="startRump()"
+            id="start_btn"
+            class="btn-lg btn-success"
+            style="margin-top: 1%"
+          >
+            Start
+          </button>
+          <button
+            onclick="stopRump()"
+            id="stop_btn"
+            class="btn-lg btn-danger"
+            style="margin-top: 1%; margin-left: 30px"
+          >
+            Stop
+          </button>
+        </div>
       </div>
     </div>
   </body>
 </html>
 
 <script>
-  const GAUGE_MAX = 100;
-  const RUMP_MINUTES = 10;
   const timeOutSound = new Audio('./media/applause.mp3');
   const kickedSound = new Audio('./media/horn-sound-effect.mp3');
 
   const ADMIN_PW_KEY = 'sthack-rump:admin_pw';
 
-  let thresholdReached = false;
-  let startTimestamp;
-
+  let gaugeMax = 100; // used for initialization
+  let status;
   const socket = io();
+
+  const gauge = createGauge();
+
   const adminPwFromLocalStorage = window.localStorage.getItem(ADMIN_PW_KEY);
   if (!adminPwFromLocalStorage) {
     window.location = '/login-admin.html';
   }
   socket.emit('auth-admin', adminPwFromLocalStorage);
 
+  socket.emit('get-rump-status');
+
   function startRump() {
-    document.getElementById('start_btn').hidden = true;
-
-    const gauge = createGauge();
-
-    const startTimestamp = Date.now();
-    const timer = setInterval(() => {
-      const elapsedSeconds = Math.ceil((Date.now() - startTimestamp) / 1000);
-      let remainingTime = RUMP_MINUTES * 60 - elapsedSeconds;
-      if (remainingTime <= 0) {
-        remainingTime = 0;
-        gauge.setValueAnimated(GAUGE_MAX);
-        timeOutSound.play();
-        thresholdReached = true;
-        clearInterval(timer);
-      }
-      const remainingMinutes = (
-        '00' + parseInt(Math.floor(remainingTime / 60))
-      ).slice(-2);
-      const remainingSeconds = (
-        '00' + parseInt(Math.floor(remainingTime % 60))
-      ).slice(-2);
-      const timerLabel = `${remainingMinutes}:${remainingSeconds}`;
-      document.getElementById('timer').textContent = timerLabel;
-    }, 100);
-
-    socket.emit('clapmeter-reset');
-    socket.on('clapmeter', (value) => {
-      if (thresholdReached) return;
-      if (value >= GAUGE_MAX) {
-        thresholdReached = true;
-        kickedSound.play();
-        setTimeout(() => timeOutSound.play(), 2000);
-        gauge.setValue(GAUGE_MAX);
-        document.getElementById('timer').textContent = 'Thanks, next !';
-        clearInterval(timer);
-      } else if (!thresholdReached) gauge.setValue(value);
-    });
+    socket.emit('set-rump-status', 'running');
   }
+
+  function stopRump() {
+    socket.emit('set-rump-status', 'waiting');
+  }
+
+  function showRunning() {
+    document.getElementById('timer').textContent = '10:00';
+    document.getElementById('gauge').style = '';
+    document.getElementById('timer').setAttribute('class', 'timer-container');
+    document.getElementById('gauge').setAttribute('class', 'gauge-container');
+    gauge.setValue(0);
+  }
+
+  function showTimeOver() {
+    gauge.setValueAnimated(gaugeMax);
+    document
+      .getElementById('timer')
+      .setAttribute('class', 'timer-container gauge-shake');
+    timeOutSound.play();
+  }
+
+  function showKicked() {
+    kickedSound.play();
+    setTimeout(() => timeOutSound.play(), 2000);
+    gauge.setMaxValue(gaugeMax);
+    gauge.setValue(gaugeMax);
+    document.getElementById('timer').textContent = 'Thanks, next !';
+    document
+      .getElementById('gauge')
+      .setAttribute('class', 'gauge-container gauge-shake');
+  }
+
+  function showWaiting() {
+    document.getElementById('timer').textContent = 'Ready to rump';
+    document.getElementById('gauge').style = 'visibility:hidden';
+    document.getElementById('timer').setAttribute('class', 'timer-container');
+    document.getElementById('gauge').setAttribute('class', 'gauge-container');
+    gauge.setValue(0);
+  }
+
+  socket.on('rump-status', (newStatus) => {
+    if (newStatus === status) return;
+    console.log(`new rump status : ${newStatus} (previous : ${status})`);
+    status = newStatus;
+    if (status === 'waiting') {
+      showWaiting();
+    } else if (status === 'running') {
+      showRunning();
+    } else if (status === 'time-over') {
+      showTimeOver();
+    } else if (status === 'kicked') {
+      showKicked();
+    }
+  });
+
+  socket.on('clapmeter', (evt) => {
+    const { current, max } = evt;
+    if (status !== 'running') return;
+    gaugeMax = max;
+    gauge.setMaxValue(max);
+    gauge.setValue(current);
+  });
+
+  socket.on('timer', (remainingTime) => {
+    if (status !== 'running') return;
+    const remainingMinutes = (
+      '00' + parseInt(Math.floor(remainingTime / 60))
+    ).slice(-2);
+    const remainingSeconds = (
+      '00' + parseInt(Math.floor(remainingTime % 60))
+    ).slice(-2);
+    const timerLabel = `${remainingMinutes}:${remainingSeconds}`;
+    document.getElementById('timer').textContent = timerLabel;
+  });
 
   function createGauge() {
     const Gauge = window.Gauge;
 
     return Gauge(document.getElementById('gauge'), {
-      max: GAUGE_MAX,
+      max: gaugeMax,
       label: function (value) {
         return `${parseInt(Math.ceil(value), 10)} 👏`;
       },
       value: 0,
       color: function (value) {
-        if (value >= GAUGE_MAX) {
+        if (value >= gaugeMax) {
           return '#ef4655'; // red
-        } else if (value > GAUGE_MAX - GAUGE_MAX * 0.2) {
+        } else if (value > gaugeMax - gaugeMax * 0.2) {
           return '#f7aa38'; // orange
-        } else if (value > GAUGE_MAX - GAUGE_MAX * 0.5) {
+        } else if (value > gaugeMax - gaugeMax * 0.5) {
           return '#fffa50'; // yellow
         } else {
           return '#5ee432'; // green

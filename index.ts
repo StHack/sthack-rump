@@ -4,15 +4,27 @@ import { Participant, Rump, assertIsString } from './src/utils';
 import { json } from 'body-parser';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
+
+enum RumpStatus {
+  waiting = 'waiting',
+  running = 'running',
+  timeover = 'time-over',
+  kicked = 'kicked',
+}
+
 // eslint-disable-next-line node/no-unpublished-import
 const participants = JSON.parse(readFileSync('./participants.json', 'utf-8'));
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
 const clapping: Map<string, ReturnType<typeof setTimeout>> = new Map();
-
+let rumpStatus = RumpStatus.waiting;
+let startTimestamp: number;
+let timer: ReturnType<typeof setInterval>;
+const clapThreshold = Math.floor(Object.keys(participants).length / 2);
 const AUTH_HEADER = 'rump-sthack-auth';
 const CLAPPING_TTL = 1000;
+const RUMP_MINUTES = 1;
 
 function authenticate(qrCode: string | undefined) {
   if (qrCode) {
@@ -99,6 +111,11 @@ interface ISocket extends Socket {
 }
 
 io.on('connection', (socket: ISocket) => {
+  // Helper for the bricolage
+  const broadcast = (event: string, value: any) => {
+    socket.emit(event, value);
+    socket.broadcast.emit(event, value);
+  };
   console.log('a user connected');
   socket.on('auth', (qrCode: string) => {
     console.log(`auth with QR code : ${qrCode}`);
@@ -118,6 +135,10 @@ io.on('connection', (socket: ISocket) => {
     }
   });
   socket.on('clap', () => {
+    if (rumpStatus !== RumpStatus.running) {
+      console.log(`rump not running, ignoring clap event`);
+      return;
+    }
     const participant = socket.authenticatedParticipant;
     console.log(
       `clap event received (authenticated user : ${participant?.displayName})`
@@ -139,19 +160,62 @@ io.on('connection', (socket: ISocket) => {
       key,
       setTimeout(() => {
         clapping.delete(key);
-        socket.broadcast.emit('clapmeter', clapping.size);
-        console.log(`clapmeter : ${clapping.size}`);
+        broadcast('clapmeter', {
+          current: clapping.size,
+          max: clapThreshold,
+        });
       }, CLAPPING_TTL)
     );
-    socket.broadcast.emit('clapmeter', clapping.size);
-    console.log(`clapmeter : ${clapping.size}`);
+    if (clapping.size >= clapThreshold) {
+      console.log('clapping threshold reached !');
+      clearInterval(timer);
+      broadcast('rump-status', RumpStatus.kicked);
+    } else {
+      broadcast('clapmeter', {
+        current: clapping.size,
+        max: clapThreshold,
+      });
+    }
   });
-  socket.on('clapmeter-reset', () => {
+  socket.on('get-rump-status', () => {
+    console.log(`get-rump-status -> ${rumpStatus}`);
+    socket.emit('rump-status', rumpStatus);
+  });
+  socket.on('set-rump-status', (newStatus: RumpStatus) => {
     if (!socket.isAdmin) {
-      console.log(`no right to reset the clapmeter my dude`);
+      console.log(`no right to change rump status`);
       return;
     }
+    console.log(`set-rump-status to ${newStatus}`);
+    if (newStatus === RumpStatus.running) {
+      // start timer
+      startTimestamp = Date.now();
+      timer = setInterval(() => {
+        const elapsedSeconds = Math.ceil((Date.now() - startTimestamp) / 1000);
+        let remainingTime = RUMP_MINUTES * 60 - elapsedSeconds;
+        if (remainingTime <= 0) {
+          remainingTime = 0;
+          broadcast('timer', remainingTime);
+          clearInterval(timer);
+          broadcast('rump-status', RumpStatus.timeover);
+        }
+        broadcast('timer', remainingTime);
+      }, 100);
+    } else {
+      broadcast('timer', 0);
+      clearInterval(timer);
+    }
+    rumpStatus = newStatus;
+    // Reset clapmeter at every status change
+    for (const timeout of clapping.values()) {
+      clearTimeout(timeout);
+    }
     clapping.clear();
+    broadcast('clapmeter', {
+      current: clapping.size,
+      max: clapThreshold,
+    });
+    broadcast('rump-status', newStatus);
   });
   socket.on('disconnect', () => {
     console.log('user disconnected');
